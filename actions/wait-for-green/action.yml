@@ -1,0 +1,45 @@
+name: GridPulse green window
+description: Plan or wait for a carbon-aware compute window, with a bounded delay.
+inputs:
+  region:
+    description: Grid region (DE, US-CAISO, US-ERCOT, US-PJM)
+    default: DE
+  duration-hours:
+    description: Continuous job duration in whole hours
+    default: '1'
+  energy-kwh:
+    description: Estimated total job energy in kWh
+    default: '1'
+  deadline:
+    description: UTC deadline including timezone
+    required: true
+  wait:
+    description: Actually wait for the selected window (false is plan-only)
+    default: 'false'
+  max-wait-minutes:
+    description: Bound billed runner idle time; fail rather than wait longer
+    default: '30'
+outputs:
+  start:
+    description: Selected UTC start
+    value: ${{ steps.window.outputs.start }}
+  expected-kg:
+    description: Forecast average lifecycle CO2e allocation, not measured savings
+    value: ${{ steps.window.outputs.expected-kg }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - id: window
+      shell: bash
+      env:
+        GP_SOURCE: ${{ github.action_path }}/../..
+        GP_REGION: ${{ inputs.region }}
+        GP_HOURS: ${{ inputs.duration-hours }}
+        GP_ENERGY: ${{ inputs.energy-kwh }}
+        GP_DEADLINE: ${{ inputs.deadline }}
+        GP_WAIT: ${{ inputs.wait }}
+        GP_MAX_WAIT: ${{ inputs.max-wait-minutes }}
+      run: python "$GP_SOURCE/actions/wait-for-green/run.py"
