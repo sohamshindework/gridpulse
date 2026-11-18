@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="310" viewBox="0 0 1000 310" role="img" aria-labelledby="title description">
+<title id="title">Same job, different hour: an illustrative carbon accounting example</title>
+<desc id="description">A 12 kilowatt-hour job at 300 grams of carbon dioxide equivalent per kilowatt-hour is allocated 3.6 kilograms. At 200 grams it is allocated 2.4 kilograms: 1.2 kilograms or 33 percent less. These are made-up teaching numbers, not live results or proof of avoided emissions.</desc>
+<rect width="1000" height="310" rx="16" fill="#f3efe7"/>
+<g font-family="Arial, Helvetica, sans-serif" fill="#292522">
+<text x="30" y="34" font-size="12" font-weight="700" letter-spacing="2">SAME JOB. A CLEANER HOUR.</text>
+<text x="970" y="34" font-size="11" text-anchor="end" fill="#746e66">ILLUSTRATIVE EXAMPLE / NOT LIVE DATA</text>
+<rect x="30" y="57" width="350" height="168" rx="10" fill="#fff9f0" stroke="#d4cec1"/>
+<text x="52" y="84" font-size="12" font-weight="700" fill="#746e66">RUN SOONER</text>
+<text x="52" y="116" font-size="17">12 kWh × 300 g CO₂e/kWh</text>
+<text x="52" y="165" font-size="40" font-weight="700">3.6 kg</text>
+<rect x="52" y="185" width="295" height="12" rx="6" fill="#fa5d2b"/>
+<text x="500" y="144" font-size="38" text-anchor="middle" fill="#5741d9">→</text>
+<rect x="620" y="57" width="350" height="168" rx="10" fill="#e1ed8a" stroke="#b8c56d"/>
+<text x="642" y="84" font-size="12" font-weight="700" fill="#586125">SHIFT TO A CLEANER HOUR</text>
+<text x="642" y="116" font-size="17">12 kWh × 200 g CO₂e/kWh</text>
+<text x="642" y="165" font-size="40" font-weight="700">2.4 kg</text>
+<rect x="642" y="185" width="197" height="12" rx="6" fill="#5741d9"/>
+<rect x="352" y="242" width="296" height="40" rx="20" fill="#5741d9"/>
+<text x="500" y="268" font-size="16" font-weight="700" text-anchor="middle" fill="#fff">1.2 kg lower allocation · 33% less</text>
+<text x="30" y="298" font-size="10" fill="#746e66">CO₂e = carbon dioxide equivalent. This compares average electricity footprints, not causal avoided emissions.</text>
+</g></svg>
