@@ -1,0 +1,13 @@
+{
+  "status": "partial",
+  "checkedAt": "2026-11-18T16:19:18.554993Z",
+  "errors": {
+    "DE": "Source interval gap over configured limit: DE/generation/geothermal/energy-charts"
+  },
+  "updatedRegions": [
+    "US-CAISO",
+    "US-ERCOT",
+    "US-PJM"
+  ],
+  "policy": "Invalid regions quarantined; their last good archived measurements retained. No missing values filled."
+}

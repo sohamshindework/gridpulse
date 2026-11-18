@@ -27,13 +27,24 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add data/observations web/public/api
+          git add data/observations data/health.json web/public/api
           if ! git diff --cached --quiet; then
             git commit -m 'data: hourly validated grid snapshot'
             git push
           fi
+      - name: Detect quarantined regions
+        if: success()
+        id: health
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          path=Path('data/health.json')
+          data=json.loads(path.read_text()) if path.exists() else {}
+          print('partial='+str(data.get('status')=='partial').lower())
+          PY
       - name: Open or update source-failure issue
-        if: failure()
+        if: failure() || steps.health.outputs.partial == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -41,7 +52,7 @@ jobs:
         run: |
           issue=$(gh issue list --state open --search 'Grid data refresh failed in:title' --json number --jq '.[0].number // empty')
           if [ -z "$issue" ]; then
-            gh issue create --title 'Grid data refresh failed' --body "Source ingestion or a data contract failed. The last published snapshot is retained. Inspect $RUN_URL. EIA DEMO_KEY is rate limited; configure EIA_API_KEY for more reliable US refreshes."
+            gh issue create --title 'Grid data refresh failed' --body "A source or data contract failed. Invalid regions keep their last good observations while valid regions may refresh; complete failures retain the published snapshot. Read data/health.json and inspect $RUN_URL. EIA DEMO_KEY is rate limited; configure EIA_API_KEY for more reliable US refreshes."
           else
-            gh issue comment "$issue" --body "Refresh failed again; last published snapshot retained. Inspect $RUN_URL."
+            gh issue comment "$issue" --body "A source remains quarantined or the refresh failed; last good observations retained for affected regions. Read data/health.json. Inspect $RUN_URL."
           fi

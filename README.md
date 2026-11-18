@@ -81,7 +81,7 @@ Your ledger stays in your browser. You confirm execution and energy use; public 
 | Forecast + shaded range | Estimates based on recent patterns and past errors. No guarantee. |
 | Carbon / cost differences | Average footprints and wholesale costs, not proven avoided emissions or your full bill. |
 
-Updates are scheduled hourly. Failed updates keep the last good snapshot. Old data pauses scheduling.
+Updates are scheduled hourly. Failed regions keep their last good data, with a visible warning. Other grids can keep updating. Old data pauses scheduling.
 
 Advanced AI forecasts, imported-electricity accounting and modelling how power plants respond to demand are **future work**.
 

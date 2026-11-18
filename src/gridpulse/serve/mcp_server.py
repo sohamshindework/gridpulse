@@ -29,13 +29,13 @@ def call(name,args,data):
     if name in ('get_flex_signal','simulate_fleet'):
         key=args['region']; signals=data['gridflex']['regions'][key]
         if name=='get_flex_signal':
-            return {'region':key,'now':signals['now'],'forecast':signals['forecast'],'limits':signals['limits'],'attribution':data['attribution']}
+            return {'region':key,'now':signals['now'],'forecast':signals['forecast'],'limits':signals['limits'],'dataHealth':data.get('dataHealth'),'attribution':data['attribution']}
         from ..gridflex.simulator import simulate,Fleet
         hours=args.get('hours',168)
         if type(hours) is not int or not 1<=hours<=min(336,len(signals['history'])): raise ValueError('Invalid or unavailable replay horizon')
         result=simulate(signals['history'][-hours:],Fleet(gpus=args.get('gpus',1000),mode=args.get('mode','hybrid')))
         for replay in ('baseline','controlled'): result[replay].pop('trace',None)
-        result.pop('gridInputs',None);result['region']=key;result['attribution']=data['attribution']
+        result.pop('gridInputs',None);result['region']=key;result['attribution']=data['attribution'];result['dataHealth']=data.get('dataHealth')
         return result
     if name=='schedule_job':
         job=args['job'];job.setdefault('earliest_start',now.isoformat())

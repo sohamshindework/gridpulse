@@ -106,7 +106,7 @@ Each file includes data status, generation time, attribution and accounting basi
 
 ## Hourly automation
 
-`ingest_hourly.yml` runs at minute **17 every hour (UTC)**, or on manual dispatch. It fetches a 14-day rolling history, validates before publication, merges data, computes the baseline and publishes JSON. It commits only after successful source/contract checks. Failure opens or updates a GitHub issue and retains the last published snapshot. A failed optional US source currently fails the whole refresh to avoid silently publishing partial updates. The UI pauses scheduling on stale data.
+`ingest_hourly.yml` runs at minute **17 every hour (UTC)**, or on manual dispatch. It fetches a 14-day rolling history, validates before publication, merges data, computes the baseline and publishes JSON. It commits validated regions only. A failed region keeps its last good archived observations while valid regions can refresh. `data/health.json`, API `dataHealth` and a dashboard warning disclose quarantined regions. Partial or complete failures open or update a GitHub issue. If every requested region fails, the whole published snapshot is retained. The UI pauses scheduling on stale data.
 
 `deploy_pages.yml` builds on `main` pushes and successful hourly runs. Enable GitHub Pages with **Source: GitHub Actions**. GitHub schedules can be delayed or disabled after repository inactivity. EIA shared demo-key quotas and provider downtime can interrupt updates; no uptime guarantee is implied. Growing Parquet history belongs in an external dataset store before repository history gets large.
 

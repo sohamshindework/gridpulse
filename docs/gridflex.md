@@ -54,7 +54,7 @@ US proxy: actual hourly EIA demand above its published forecast by 2%/5%/10% →
 
 If independently supplied available capacity is present, capacity margins below 15%/7%/3% can contribute levels 1/2/3. **No such capacity feed is connected. All published reserve margins are null.** Net generation is not substituted for available capacity.
 
-Future German levels use the renewable baseline and actual published prices. Future US levels repeat the most recent historical same-UTC-hour demand deviation available strictly before the forecast origin, with a 72-hour reference-age limit. These are proxy outlooks, not calibrated stress predictions. Unknown input stays unknown; the simulator rejects unknown hours and gaps.
+Future German levels use the renewable baseline and actual published prices. Future US levels repeat the most recent historical same-UTC-hour demand deviation available strictly before the forecast origin, with a 72-hour reference-age limit. These are proxy outlooks, not calibrated stress predictions. Unknown input stays unknown; the simulator rejects unknown hours and gaps. A failed regional data contract quarantines incoming rows and retains that region’s previous observations. Check `dataHealth` and the dashboard warning before interpreting fresh snapshot timestamps.
 
 Source attribution and input values accompany each signal. Public files:
 
@@ -117,7 +117,7 @@ python -m gridpulse.gridflex.operator --namespace YOUR_NAMESPACE \
 # Still dry-run. Add --apply only after integrating and testing your workload hooks.
 ```
 
-Live mode requires in-cluster credentials. Forecast snapshots older than six hours, measurements older than 24 hours, absent current-hour levels or invalid levels become unknown and release managed restrictions. Transient API conflicts are retried at the next loop. The single-controller demo does not implement leader election; run one replica. Original managed fields belong to this controller while a Job is opted in; do not concurrently scale them with another controller.
+Live mode requires in-cluster credentials. Quarantined regions suppress live flex requests. Forecast snapshots older than six hours, measurements older than 24 hours, absent current-hour levels or invalid levels become unknown and release managed restrictions. Transient API conflicts are retried at the next loop. The single-controller demo does not implement leader election; run one replica. Original managed fields belong to this controller while a Job is opted in; do not concurrently scale them with another controller.
 
 ## 5. Kepler and hardware adapters
 

@@ -23,4 +23,4 @@ def flex_signal(region='DE', url=DEFAULT_URL):
     """Read published heuristic levels with source times; no infrastructure changes."""
     with urlopen(url, timeout=30) as response:
         data=json.load(response)
-    return {'generatedAt':data['generatedAt'],'attribution':data['attribution'],**data['gridflex']['regions'][region]}
+    return {'generatedAt':data['generatedAt'],'attribution':data['attribution'],'dataHealth':data.get('dataHealth'),**data['gridflex']['regions'][region]}

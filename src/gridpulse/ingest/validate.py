@@ -21,8 +21,20 @@ def validate(rows, max_gap_h=3):
         if row['metric']=='price' and not -2<=value<=10:
             raise ValueError('Price outside EUR/kWh contract')
         timelines[(row['region'],row['metric'],row['fuel'],row['source'])].add(time)
-    for times in timelines.values():
+    for timeline, times in timelines.items():
         ordered=sorted(times)
         if any((b-a).total_seconds()>max_gap_h*3600 for a,b in zip(ordered,ordered[1:])):
-            raise ValueError('Source interval gap over configured limit')
+            raise ValueError('Source interval gap over configured limit: '+ '/'.join(timeline))
     return rows
+
+
+def validate_regions(rows):
+    """Quarantine whole invalid regions; never let one gap block other grids."""
+    grouped=defaultdict(list)
+    for row in rows: grouped[row['region']].append(row)
+    accepted=[];errors={}
+    for region,batch in grouped.items():
+        try:validate(batch)
+        except (ValueError,KeyError,TypeError) as exc:errors[region]=str(exc)
+        else:accepted.extend(batch)
+    return accepted,errors

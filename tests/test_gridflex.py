@@ -165,6 +165,9 @@ def test_signal_freshness_unknown_and_published_selection():
     payload={'generatedAt':iso(NOW),'regions':[{'id':'DE','now':{'timestamp':iso(NOW-timedelta(hours=2))}}],
              'gridflex':{'regions':{'DE':{'forecast':[{'timestamp':iso(NOW),'level':2}]}}}}
     assert published_level(payload,'DE',NOW)==2
+    payload['dataHealth']={'errors':{'DE':'missing readings'}}
+    assert published_level(payload,'DE',NOW) is None
+    payload.pop('dataHealth')
     payload['regions'][0]['now']['timestamp']=iso(NOW-timedelta(days=2))
     assert published_level(payload,'DE',NOW) is None
 
@@ -186,3 +189,16 @@ def test_real_gpu_adapter_bounds_without_hardware_execution():
     assert bounded_cap(700,200,700,.8)==560
     assert bounded_cap(700,200,700,.1)==200
     with pytest.raises(ValueError):bounded_cap(700,200,700,1.1)
+
+
+def test_invalid_region_quarantined_without_weakening_gap_contract():
+    from gridpulse.ingest.validate import validate_regions,validate
+    rows=[record(NOW,'DE','generation','other',10,'MW','energy-charts',NOW),
+          record(NOW+timedelta(hours=4),'DE','generation','other',10,'MW','energy-charts',NOW),
+          record(NOW,'US-CAISO','generation','gas',100,'MW','eia',NOW),
+          record(NOW+timedelta(hours=1),'US-CAISO','generation','gas',110,'MW','eia',NOW)]
+    with pytest.raises(ValueError,match='gap'):validate(rows)
+    accepted,errors=validate_regions(rows)
+    assert set(errors)=={'DE'}
+    assert {r['region'] for r in accepted}=={'US-CAISO'}
+    assert len(accepted)==2

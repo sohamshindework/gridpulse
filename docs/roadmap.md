@@ -34,3 +34,5 @@ No pending research gate is reported as an achieved result. The initial scorecar
 - [ ] Capacity-aware migration execution, operator leader election and upstream adapter contributions.
 
 Kubernetes CPU-mock verification is tracked by the dedicated kind integration workflow; it does not validate real GPU behaviour. See [GridFlex methods](gridflex.md).
+
+- [x] Region-level source quarantine with retained good observations, public health metadata and visible partial-refresh warnings.

@@ -4,15 +4,17 @@ from datetime import datetime,timezone,timedelta
 from pathlib import Path
 from .ingest import energy_charts,eia930,eia_stress,weather
 from .ingest.common import iso,ATTRIBUTIONS
-from .ingest.validate import validate
+from .ingest.validate import validate,validate_regions
 from .store.parquet_writer import write,read
 from .carbon.intensity import hourly,FACTORS
 from .forecast.baselines import forecast,backtest
 from .sdk import best_window
 
 
-def publish(store,output):
+def publish(store,output,health=None):
     rows=read(store);measured=hourly(rows);now=datetime.now(timezone.utc)
+    health_path=Path(store).parent/'health.json'
+    if health is None: health=json.loads(health_path.read_text()) if health_path.exists() else {'status':'unknown','errors':{}}
     regions=[]
     definitions=[('DE','Germany','Frankfurt','DE-LU'),('US-CAISO','California','US West','CISO'),('US-ERCOT','Texas','US Central','ERCO'),('US-PJM','Mid-Atlantic','US East','PJM')]
     for key,name,location,zone in definitions:
@@ -39,6 +41,11 @@ def publish(store,output):
     for region in regions:
         if region['status'] == 'available':
             flex_regions[region['id']] = build_signals(region['id'], region['history'], region['forecast'], rows)
+            if region['id'] in health.get('errors',{}):
+                flex_regions[region['id']]['quarantined']=True
+                for signal in flex_regions[region['id']]['forecast']:
+                    signal['level']=None;signal['label']='Unknown'
+                    signal['reasons']=['Regional source quarantined; live flex request suppressed']
     examples = {}
     for key, signals in flex_regions.items():
         replay = signals['history'][-168:]
@@ -50,7 +57,7 @@ def publish(store,output):
                 examples[key]['factorVersion'] = FACTORS['version']
             except ValueError: pass
     data={'generatedAt':iso(now),'version':'0.2.0','basis':'Production-based average lifecycle gCO2e/kWh; excludes imports and pumped-storage output. Not marginal carbon.',
-          'attribution':list(ATTRIBUTIONS.values()),'factorVersion':FACTORS['version'],'regions':regions,
+          'dataHealth':health,'attribution':list(ATTRIBUTIONS.values()),'factorVersion':FACTORS['version'],'regions':regions,
           'gridflex': {'regions': flex_regions, 'examples': examples, 'kind': 'heuristic signals + simulated fleets'},
           'ledger':{'executedJobs':0,'verifiedSavingsKg':0,'entries':[],'note':'No public execution telemetry connected. Browser plans are local and not counted as savings.'}}
     root=Path(output);root.mkdir(parents=True,exist_ok=True)
@@ -91,10 +98,29 @@ def main():
         print(json.dumps(best_window(region=args.region,duration_h=args.hours,energy_kWh=args.energy,deadline=args.deadline,objective=args.objective),indent=2));return
     if args.command=='update':
         now=datetime.now(timezone.utc);start=(now-timedelta(days=args.days)).strftime('%Y-%m-%d');end=now.strftime('%Y-%m-%d')
-        rows=energy_charts.ingest(start,end)
-        if args.with_us:rows+=eia930.ingest(start,end)+eia_stress.ingest(start,end)
-        if args.with_weather:rows+=weather.ingest()
-        validate(rows);write(rows,args.store)
+        rows=[];source_errors={}
+        try:rows+=energy_charts.ingest(start,end)
+        except Exception as exc:source_errors['DE']=str(exc)
+        if args.with_us:
+            try:rows+=eia930.ingest(start,end)+eia_stress.ingest(start,end)
+            except Exception as exc:
+                for region in ('US-CAISO','US-ERCOT','US-PJM'):source_errors[region]=str(exc)
+        if args.with_weather:
+            try:rows+=weather.ingest()
+            except Exception as exc:source_errors['weather']=str(exc)
+        accepted,errors=validate_regions(rows);errors.update(source_errors)
+        # Any failed region retains its last archived observations.
+        accepted=[row for row in accepted if row['region'] not in errors]
+        if not accepted:raise ValueError('No valid regions in refresh; preserving last published snapshot: '+str(errors))
+        write(accepted,args.store)
+        health={'status':'partial' if errors else 'healthy','checkedAt':iso(now),'errors':errors,
+                'updatedRegions':sorted({row['region'] for row in accepted}),
+                'policy':'Invalid regions quarantined; their last good archived measurements retained. No missing values filled.'}
+        data=publish(args.store,args.output,health)
+        health_path=Path(args.store).parent/'health.json';health_path.parent.mkdir(parents=True,exist_ok=True)
+        health_path.write_text(json.dumps(health,indent=2)+'\n')
+        print('Refresh health:',health['status'],json.dumps(errors))
+        return
     publish(args.store,args.output)
 
 

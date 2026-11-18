@@ -97,6 +97,7 @@ def signal_level(payload, now=None, max_age_seconds=21600):
 def published_level(payload, region, now=None):
     now = now or datetime.now(timezone.utc)
     try:
+        if region in payload.get('dataHealth',{}).get('errors',{}): return None
         selected = payload['gridflex']['regions'][region]
         measurements = next(r for r in payload['regions'] if r['id'] == region)
         observed = datetime.fromisoformat(measurements['now']['timestamp'].replace('Z', '+00:00'))
