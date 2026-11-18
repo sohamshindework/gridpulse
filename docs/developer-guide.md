@@ -125,3 +125,15 @@ Recorded DE/EIA source fixtures, UTC/DST handling, carbon arithmetic, partitione
 **Energy-Charts / Fraunhofer ISE · Bundesnetzagentur | SMARD.de · U.S. EIA**. Optional weather: **Open-Meteo.com**. See [data licences](data_licences.md).
 
 Production-average lifecycle intensity excludes imports and pumped-storage output. It is not consumption-based or marginal intensity. Forecast uncertainty is descriptive, not calibrated. Wholesale costs exclude retail fees and taxes. Savings are measured accounting differences with user-attested execution and energy, not an independently metered causal reduction. MIT software licence; source data terms remain separate.
+
+
+## GridFlex
+
+For live proxy signals, fleet replay, the Kubernetes controller and Kepler/device hooks, see the [GridFlex visual guide and model card](gridflex.md).
+
+```sh
+gridpulse flex-sim --region DE --gpus 10000 --hours 168 --output replay.json
+python -m gridpulse.gridflex.operator --jobs k8s/fixtures/jobs.json --level 3
+```
+
+MCP additionally exposes `get_flex_signal` and `simulate_fleet`. Hourly US ingestion now archives EIA demand and demand-forecast records as well as generation. Reserve margins remain unknown without independent available-capacity data.

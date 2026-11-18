@@ -1,0 +1,1 @@
+{"items":[{"metadata":{"name":"training-example","labels":{"gridpulse.dev/flex-enabled":"true","gridpulse.dev/workload":"training","gridpulse.dev/preemptible":"true"}},"spec":{"parallelism":1,"suspend":false}},{"metadata":{"name":"inference-example","labels":{"gridpulse.dev/flex-enabled":"true","gridpulse.dev/workload":"inference"}},"spec":{"parallelism":1}}]}

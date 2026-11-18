@@ -136,6 +136,6 @@ def test_utc_dst_and_adapter_boundaries():
 def test_mcp_protocol_initialize_tools_and_errors():
     reply=handle({'jsonrpc':'2.0','id':1,'method':'initialize'},lambda:None)
     assert reply['result']['serverInfo']['name']=='gridpulse'
-    assert len(handle({'id':2,'method':'tools/list'},lambda:None)['result']['tools'])==3
+    assert len(handle({'id':2,'method':'tools/list'},lambda:None)['result']['tools'])==5
     assert handle({'method':'notifications/initialized'},lambda:None) is None
     assert handle({'id':3,'method':'unknown'},lambda:None)['error']['code']==-32601

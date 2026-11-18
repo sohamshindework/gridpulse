@@ -85,6 +85,27 @@ Updates are scheduled hourly. Failed updates keep the last good snapshot. Old da
 
 Advanced AI forecasts, imported-electricity accounting and modelling how power plants respond to demand are **future work**.
 
+## 6. GridFlex: what if the job is already running?
+
+**Keep inference running. Let flexible training make room.**
+
+```mermaid
+flowchart LR
+    A["Grid proxy level<br/>0 → 3"] --> B["Cap power<br/>or checkpoint + pause"]
+    B --> C["Replay 1,000–10,000 GPUs"]
+    C --> D["See power reduced<br/>AND training work delayed"]
+    classDef violet fill:#5741d9,stroke:#3e2ca9,color:#ffffff
+    classDef lime fill:#e1ed8a,stroke:#929f4c,color:#292522
+    class A,B violet
+    class C,D lime
+```
+
+[Try the GridFlex lab ↗](https://sohamshindework.github.io/gridpulse/#gridflex)
+
+Real grid history drives a **simulated fleet**, with explicit power, checkpoint and deadline assumptions. It is not a GPU benchmark or a year-long result.
+
+An opt-in Kubernetes controller can request changes from cooperative training jobs. It waits for a saved checkpoint before pausing and leaves inference untouched. [How it works + the CPU-cluster demo](docs/gridflex.md).
+
 ## Developer tools
 
 | Tool | What it does |

@@ -17,3 +17,10 @@ def best_window(region='DE',duration_h=3,deadline=None,energy_kWh=1,objective='c
     available={r['id']:r['forecast'] for r in data['regions'] if r['status']=='available' and (now-datetime.fromisoformat(r['now']['timestamp'].replace('Z','+00:00'))).total_seconds()<=24*3600}
     return optimize(available,dict(duration_h=duration_h,energy_kWh=energy_kWh,deadline=deadline,
                                   earliest_start=now.isoformat(),allowed_regions=[region],objective=objective,**kwargs))
+
+
+def flex_signal(region='DE', url=DEFAULT_URL):
+    """Read published heuristic levels with source times; no infrastructure changes."""
+    with urlopen(url, timeout=30) as response:
+        data=json.load(response)
+    return {'generatedAt':data['generatedAt'],'attribution':data['attribution'],**data['gridflex']['regions'][region]}

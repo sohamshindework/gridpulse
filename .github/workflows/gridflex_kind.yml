@@ -1,0 +1,40 @@
+name: GridFlex kind integration
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/gridpulse/gridflex/**'
+      - 'src/gridpulse/__init__.py'
+      - 'src/gridpulse/sdk.py'
+      - 'src/gridpulse/scheduler/**'
+      - 'src/gridpulse/ingest/common.py'
+      - 'k8s/**'
+      - 'scripts/kind-smoke.py'
+      - '.github/workflows/gridflex_kind.yml'
+  pull_request:
+    paths:
+      - 'src/gridpulse/gridflex/**'
+      - 'k8s/**'
+      - 'scripts/kind-smoke.py'
+      - '.github/workflows/gridflex_kind.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cooperative-control:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: gridflex
+          wait: 120s
+      - run: docker build -f k8s/Dockerfile -t gridflex:test .
+      - run: kind load docker-image gridflex:test --name gridflex
+      - run: kubectl apply -f k8s/demo.yaml
+      - run: kubectl -n gridflex-demo rollout status deployment/gridflex --timeout=120s
+      - run: python3 scripts/kind-smoke.py
+      - name: Controller logs
+        if: always()
+        run: kubectl -n gridflex-demo logs deployment/gridflex --tail=120 || true

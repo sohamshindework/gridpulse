@@ -1,0 +1,190 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gridflex-demo
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gridflex
+  namespace: gridflex-demo
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gridflex
+  namespace: gridflex-demo
+rules:
+  - apiGroups: ['batch']
+    resources: ['jobs']
+    verbs: ['get', 'list', 'patch']
+  - apiGroups: ['']
+    resources: ['configmaps']
+    resourceNames: ['gridflex-signal']
+    verbs: ['get']
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gridflex
+  namespace: gridflex-demo
+subjects:
+  - kind: ServiceAccount
+    name: gridflex
+    namespace: gridflex-demo
+roleRef:
+  kind: Role
+  name: gridflex
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gridflex-signal
+  namespace: gridflex-demo
+data:
+  signal.json: '{"generatedAt":"2000-01-01T00:00:00Z","level":0}'
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: checkpoints
+  namespace: gridflex-demo
+spec:
+  accessModes: ['ReadWriteOnce']
+  resources:
+    requests:
+      storage: 100Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gridflex
+  namespace: gridflex-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gridflex
+  template:
+    metadata:
+      labels:
+        app: gridflex
+    spec:
+      serviceAccountName: gridflex
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+        - name: controller
+          image: gridflex:test
+          imagePullPolicy: IfNotPresent
+          args: ['--namespace', 'gridflex-demo', '--apply', '--interval', '2']
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ['ALL']
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: flex-training
+  namespace: gridflex-demo
+  labels:
+    gridpulse.dev/flex-enabled: 'true'
+    gridpulse.dev/workload: training
+    gridpulse.dev/preemptible: 'true'
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      serviceAccountName: gridflex
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+        - name: training
+          image: gridflex:test
+          imagePullPolicy: IfNotPresent
+          command: ['python', '-m', 'gridpulse.gridflex.worker']
+          env:
+            - name: JOB_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['job-name']
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+            - name: checkpoints
+              mountPath: /checkpoints
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ['ALL']
+      volumes:
+        - name: checkpoints
+          persistentVolumeClaim:
+            claimName: checkpoints
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: protected-inference
+  namespace: gridflex-demo
+  labels:
+    gridpulse.dev/flex-enabled: 'true'
+    gridpulse.dev/workload: inference
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: gridflex
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: inference
+          image: gridflex:test
+          imagePullPolicy: IfNotPresent
+          command: ['python', '-m', 'gridpulse.gridflex.worker']
+          env:
+            - name: JOB_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['job-name']
+            - name: WORKLOAD
+              value: inference
+            - name: CHECKPOINT_DIR
+              value: /tmp/checkpoints
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ['ALL']

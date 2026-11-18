@@ -2,7 +2,7 @@ import argparse
 import json
 from datetime import datetime,timezone,timedelta
 from pathlib import Path
-from .ingest import energy_charts,eia930,weather
+from .ingest import energy_charts,eia930,eia_stress,weather
 from .ingest.common import iso,ATTRIBUTIONS
 from .ingest.validate import validate
 from .store.parquet_writer import write,read
@@ -33,11 +33,31 @@ def publish(store,output):
         regions.append(dict(**base,status='available',now=history[-1],history=history,forecast=outlook,scorecard=backtest(history)))
     if not any(r['status']=='available' for r in regions):
         raise ValueError('No recent usable regions; preserving last published snapshot')
-    data={'generatedAt':iso(now),'version':'0.1.0','basis':'Production-based average lifecycle gCO2e/kWh; excludes imports and pumped-storage output. Not marginal carbon.',
+    from .gridflex.signals import build_signals
+    from .gridflex.simulator import simulate, Fleet
+    flex_regions = {}
+    for region in regions:
+        if region['status'] == 'available':
+            flex_regions[region['id']] = build_signals(region['id'], region['history'], region['forecast'], rows)
+    examples = {}
+    for key, signals in flex_regions.items():
+        replay = signals['history'][-168:]
+        if replay and all(hour['level'] is not None for hour in replay):
+            try:
+                examples[key] = simulate(replay, Fleet(gpus=1000))
+                examples[key]['region'] = key
+                examples[key]['attribution'] = next(r['attribution'] for r in regions if r['id'] == key)
+                examples[key]['factorVersion'] = FACTORS['version']
+            except ValueError: pass
+    data={'generatedAt':iso(now),'version':'0.2.0','basis':'Production-based average lifecycle gCO2e/kWh; excludes imports and pumped-storage output. Not marginal carbon.',
           'attribution':list(ATTRIBUTIONS.values()),'factorVersion':FACTORS['version'],'regions':regions,
+          'gridflex': {'regions': flex_regions, 'examples': examples, 'kind': 'heuristic signals + simulated fleets'},
           'ledger':{'executedJobs':0,'verifiedSavingsKg':0,'entries':[],'note':'No public execution telemetry connected. Browser plans are local and not counted as savings.'}}
     root=Path(output);root.mkdir(parents=True,exist_ok=True)
     staged=root/'status.tmp';staged.write_text(json.dumps(data,separators=(',',':'),allow_nan=False));staged.replace(root/'status.json')
+    flex_path = root/'gridflex'; flex_path.mkdir(exist_ok=True)
+    (flex_path/'signals.json').write_text(json.dumps({'generatedAt': data['generatedAt'], 'attribution':data['attribution'], 'regions':flex_regions},separators=(',',':'),allow_nan=False))
+    (flex_path/'simulations.json').write_text(json.dumps({'generatedAt':data['generatedAt'], 'attribution':data['attribution'], 'kind':'simulation', 'examples':examples},separators=(',',':'),allow_nan=False))
     for region in regions:
         path=root/region['id'];path.mkdir(exist_ok=True)
         for file,value in [('now',region.get('now')),('forecast',region['forecast']),('scorecard',region.get('scorecard'))]:
@@ -51,13 +71,28 @@ def main():
     update=sub.add_parser('update');update.add_argument('--days',type=int,default=14);update.add_argument('--store',default='data/observations');update.add_argument('--output',default='web/public/api/v1');update.add_argument('--with-us',action='store_true');update.add_argument('--with-weather',action='store_true')
     local=sub.add_parser('publish');local.add_argument('--store',default='data/observations');local.add_argument('--output',default='web/public/api/v1')
     plan=sub.add_parser('plan');plan.add_argument('--region',default='DE');plan.add_argument('--hours',type=int,default=3);plan.add_argument('--energy',type=float,default=1);plan.add_argument('--deadline',required=True);plan.add_argument('--objective',choices=['co2','cost','balanced'],default='co2')
+    sim=sub.add_parser('flex-sim', help='Replay measured grid history through a simulated GPU fleet')
+    sim.add_argument('--input',type=Path,default=Path('web/public/api/v1/status.json'));sim.add_argument('--output',type=Path)
+    sim.add_argument('--region',default='DE');sim.add_argument('--gpus',type=int,default=1000);sim.add_argument('--hours',type=int,default=168)
+    sim.add_argument('--mode',choices=['hybrid','power-cap','checkpoint'],default='hybrid')
     args=parser.parse_args()
+    if args.command=='flex-sim':
+        from .gridflex.simulator import simulate,Fleet
+        if not 1<=args.hours<=8760: parser.error('--hours must be between 1 and 8760')
+        data=json.loads(args.input.read_text());history=data['gridflex']['regions'][args.region]['history']
+        if args.hours>len(history): parser.error('Requested replay exceeds available history')
+        result=simulate(history[-args.hours:],Fleet(gpus=args.gpus,mode=args.mode))
+        result['region']=args.region;result['attribution']=data['attribution'];result['factorVersion']=data['factorVersion']
+        output=json.dumps(result,indent=2,allow_nan=False)
+        if args.output: args.output.write_text(output+'\n')
+        else: print(output)
+        return
     if args.command=='plan':
         print(json.dumps(best_window(region=args.region,duration_h=args.hours,energy_kWh=args.energy,deadline=args.deadline,objective=args.objective),indent=2));return
     if args.command=='update':
         now=datetime.now(timezone.utc);start=(now-timedelta(days=args.days)).strftime('%Y-%m-%d');end=now.strftime('%Y-%m-%d')
         rows=energy_charts.ingest(start,end)
-        if args.with_us:rows+=eia930.ingest(start,end)
+        if args.with_us:rows+=eia930.ingest(start,end)+eia_stress.ingest(start,end)
         if args.with_weather:rows+=weather.ingest()
         validate(rows);write(rows,args.store)
     publish(args.store,args.output)
