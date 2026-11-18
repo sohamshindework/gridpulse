@@ -1,6 +1,6 @@
 {
   "status": "partial",
-  "checkedAt": "2026-11-18T16:21:50.860268Z",
+  "checkedAt": "2026-11-18T22:57:48.334249Z",
   "errors": {
     "DE": "Source interval gap over configured limit: DE/generation/geothermal/energy-charts"
   },
