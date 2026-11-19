@@ -1,10 +1,9 @@
 {
-  "status": "partial",
-  "checkedAt": "2026-11-19T04:14:15.558715Z",
-  "errors": {
-    "DE": "Source interval gap over configured limit: DE/generation/geothermal/energy-charts"
-  },
+  "status": "healthy",
+  "checkedAt": "2026-11-19T13:25:36.627325Z",
+  "errors": {},
   "updatedRegions": [
+    "DE",
     "US-CAISO",
     "US-ERCOT",
     "US-PJM"
