@@ -1,12 +1,13 @@
 {
-  "status": "healthy",
-  "checkedAt": "2026-11-26T19:40:08.884290Z",
-  "errors": {},
+  "status": "partial",
+  "checkedAt": "2026-11-27T02:52:48.364160Z",
+  "errors": {
+    "US-CAISO": "Source request failed; cached published data is retained",
+    "US-ERCOT": "Source request failed; cached published data is retained",
+    "US-PJM": "Source request failed; cached published data is retained"
+  },
   "updatedRegions": [
-    "DE",
-    "US-CAISO",
-    "US-ERCOT",
-    "US-PJM"
+    "DE"
   ],
   "policy": "Invalid regions quarantined; their last good archived measurements retained. No missing values filled."
 }
