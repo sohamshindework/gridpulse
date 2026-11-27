@@ -1,6 +1,6 @@
 {
   "status": "partial",
-  "checkedAt": "2026-11-27T02:52:48.364160Z",
+  "checkedAt": "2026-11-27T12:29:19.562273Z",
   "errors": {
     "US-CAISO": "Source request failed; cached published data is retained",
     "US-ERCOT": "Source request failed; cached published data is retained",
